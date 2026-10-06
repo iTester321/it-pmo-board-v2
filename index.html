@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-EzPCYKUGZwtt0+0p0jAdxLQ91Q6Oa+P7VuukjmqjWeA='; style-src 'sha256-R5r/k/jfm8zBKcSCMhSsoZdaBcC0WYtZDHsBSiUzlXE='; connect-src https://formsubmit.co; img-src 'none'; font-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-dXoLHeCO/EsG7NrpJ/IebmpChPxokSrhxH0pr89mAZg='; style-src 'sha256-lS3GajYHhva8N4EtbyhmqgUPbLlApyWcoIsUtDU/vfk='; connect-src https://formsubmit.co; img-src 'none'; font-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light dark">
 <title>IT PMO Delivery Board</title>
@@ -293,6 +293,17 @@ form.task-form { padding: var(--sp-5); display: grid; grid-template-columns: 1fr
 .form-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: var(--sp-2); }
 
 /* ==========================================================
+   9b. BRIEFING POPUP
+   ========================================================== */
+.briefing { width: min(440px, 92vw); }
+.briefing-body { padding: var(--sp-5); display: grid; gap: var(--sp-3); }
+.briefing-body h2 { margin: 0; font-family: var(--font-display); font-size: 20px; font-weight: 700; }
+.briefing-list { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: var(--sp-2) var(--sp-3); }
+.briefing-list dt { color: var(--ink-2); font-size: 13px; padding-top: 2px; }
+.briefing-list dd { margin: 0; font-weight: 600; }
+.briefing-actions { display: flex; justify-content: flex-end; padding-top: var(--sp-2); }
+
+/* ==========================================================
    10. TOASTS
    ========================================================== */
 .toast-region { position: fixed; right: var(--sp-4); bottom: var(--sp-4); left: var(--sp-4); display: flex; flex-direction: column; align-items: flex-end; gap: var(--sp-2); z-index: 1000; pointer-events: none; }
@@ -433,6 +444,23 @@ form.task-form { padding: var(--sp-5); display: grid; grid-template-columns: 1fr
   </form>
 </dialog>
 
+<dialog id="briefingDialog" class="briefing" aria-labelledby="briefingTitle">
+  <div class="modal-head">
+    <h2 id="briefingTitle">Upcoming briefing</h2>
+    <button type="button" class="icon-btn neutral" id="closeBriefingX" aria-label="Close reminder">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <div class="briefing-body">
+    <h2 id="briefingHeading"></h2>
+    <dl class="briefing-list">
+      <dt>When</dt><dd id="briefingWhen"></dd>
+      <dt>Where</dt><dd id="briefingWhere"></dd>
+    </dl>
+    <div class="briefing-actions"><button type="button" class="btn" id="closeBriefing">Got it</button></div>
+  </div>
+</dialog>
+
 <div class="toast-region" id="toasts"></div>
 <div class="visually-hidden" id="live" role="status" aria-live="polite"></div>
 
@@ -447,6 +475,14 @@ form.task-form { padding: var(--sp-5); display: grid; grid-template-columns: 1fr
    ========================================================== */
 const FORMSUBMIT_ENDPOINT = "https://formsubmit.co/ajax/YOUR_EMAIL@example.com";
 const TASK_ID_PREFIX = "ITPM-";
+
+// Briefing reminder: shown once per page load after the visitor has stayed BRIEFING.afterMs.
+const BRIEFING = {
+  title: "IT Project Briefing",
+  when: new Date(2026, 9, 14, 14, 0), // Wed 14 Oct 2026, 2:00 PM (local time; month is 0-based)
+  where: "Town Hall Meeting Room",
+  afterMs: 10000
+};
 
 /* ==========================================================
    REFERENCE DATA
@@ -941,12 +977,32 @@ function initControls() {
 }
 
 /* ==========================================================
+   BRIEFING POPUP (in memory only: shows once per page load)
+   ========================================================== */
+function showBriefing() {
+  // Never interrupt the add-task dialog; try again shortly.
+  if ($("taskDialog").open) { setTimeout(showBriefing, 2000); return; }
+  $("briefingHeading").textContent = BRIEFING.title;
+  $("briefingWhen").textContent = BRIEFING.when.toLocaleString(undefined, {
+    weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "numeric", minute: "2-digit"
+  });
+  $("briefingWhere").textContent = BRIEFING.where;
+  $("briefingDialog").showModal();
+  $("closeBriefing").focus();
+  announce(`Reminder: ${BRIEFING.title}, ${$("briefingWhen").textContent}, ${BRIEFING.where}.`);
+}
+function closeBriefing() { $("briefingDialog").close(); }
+
+/* ==========================================================
    INIT
    ========================================================== */
 setTheme(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
 state.tasks = seedTasks();
 initControls();
 renderBoard();
+$("closeBriefing").addEventListener("click", closeBriefing);
+$("closeBriefingX").addEventListener("click", closeBriefing);
+if (BRIEFING.when > new Date()) setTimeout(showBriefing, BRIEFING.afterMs); // skip once the meeting has passed
 </script>
 </body>
 </html>
