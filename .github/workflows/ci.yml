@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Project constraints
+        run: |
+          test -f index.html
+          if grep -nE '<script[^>]+src=|<link[^>]+href=["'"'"']?https?:|@import|<img[^>]+src=["'"'"']?https?:' index.html; then
+            echo "::error::External resources are not allowed in index.html"; exit 1
+          fi
+          if grep -n '!important' index.html; then
+            echo "::error::!important is not allowed"; exit 1
+          fi
+          if grep -nE 'localStorage|sessionStorage|indexedDB|document\.cookie' index.html; then
+            echo "::error::Persistence APIs are not allowed"; exit 1
+          fi
+
+      - name: CSP hashes are current
+        run: python3 scripts/update-csp.py --check
+
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

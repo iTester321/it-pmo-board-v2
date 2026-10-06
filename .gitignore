@@ -1,0 +1,27 @@
+# macOS
+.DS_Store
+
+# Secrets / credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+*.keystore
+credentials*.json
+service-account*.json
+*.tfstate
+.aws/
+.ssh/
+
+# Dependencies / build output
+node_modules/
+_site/
+
+# Local-only files (not part of the site)
+*.pages
+.claude/
+_local/
